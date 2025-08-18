@@ -1,5 +1,11 @@
 # Changelog
 
+## \[2.8.1]
+
+### Bug Fixes
+
+- [`902727`](https://www.github.com/tauri-apps/tauri/commit/902727a6acea0bd9569b62ca243ae9563b4ed795) Move `WebviewWindowBuilder::with_related_view` behind the `wry` feature flag.
+
 ## \[2.8.0]
 
 ### New Features
