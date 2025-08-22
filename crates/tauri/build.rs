@@ -342,7 +342,14 @@ fn main() {
     }
   }
 
-  let tauri_global_scripts = PathBuf::from("./scripts/bundle.global.js")
+  // NOTE(paris): When building Tauri apps, we update `rules_rust()` to not change the working 
+  // directory to the Rust app root (i.e. Cargo.toml). Instead we execute from the the sandbox 
+  // root. This is important b/c many of our build tools (i.e. workspace-env) expect to be run from 
+  // the sandbox root.
+  //
+  // This means that bundle.global.js may not be available in the current working dir. So we instead
+  // search for it in the current directory or any child directory.
+  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
     .canonicalize()
     .expect("failed to canonicalize tauri global API script path");
   tauri_utils::plugin::define_global_api_script_path(&tauri_global_scripts);
