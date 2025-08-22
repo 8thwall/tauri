@@ -10,6 +10,7 @@ use serde_json::Value;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+use walkdir::WalkDir;
 
 /// All extensions that are possibly supported, but perhaps not enabled.
 pub const EXTENSIONS_SUPPORTED: &[&str] = &["json", "json5", "toml"];
@@ -163,6 +164,19 @@ pub fn is_configuration_file(target: Target, path: &Path) -> bool {
     .unwrap_or_default()
 }
 
+/// Look for file in the current directory or any child directory. 
+/// ``
+/// Returns the path to the file if found, otherwise panics.
+pub fn find_file(file_name: &str, root_dir: &Path) -> String {
+  if let Some(entry) = WalkDir::new(root_dir)
+      .into_iter()
+      .filter_map(Result::ok).find(|e| e.file_name() == file_name)
+  {
+      return entry.path().to_string_lossy().to_string();
+  }
+  panic!("Cargo.toml not found in current dir or children");
+}
+
 /// Reads the configuration from the given root directory.
 ///
 /// It first looks for a `tauri.conf.json[5]` or `Tauri.toml` file on the given directory. The file must exist.
@@ -178,7 +192,14 @@ pub fn is_configuration_file(target: Target, path: &Path) -> bool {
 ///
 /// [JSON Merge Patch (RFC 7396)]: https://datatracker.ietf.org/doc/html/rfc7396.
 pub fn read_from(target: Target, root_dir: &Path) -> Result<(Value, Vec<PathBuf>), ConfigError> {
-  let (mut config, config_file_path) = parse_value(target, root_dir.join("tauri.conf.json"))?;
+  // NOTE(paris): When building Tauri apps, we update `rules_rust()` to not change the working 
+  // directory to the Rust app root (i.e. Cargo.toml). Instead we execute from the the sandbox 
+  // root. This is important b/c many of our build tools (i.e. workspace-env) expect to be run from 
+  // the sandbox root.
+  //
+  // This means that tauri.conf.json may not be available in the current working dir. So we instead
+  // search for it in the current directory or any child directory.
+  let (mut config, config_file_path) = parse_value(target, find_file("tauri.conf.json", root_dir))?;
   let mut config_paths = vec![config_file_path];
   if let Some((platform_config, path)) = read_platform(target, root_dir)? {
     config_paths.push(path);

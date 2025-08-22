@@ -504,7 +504,14 @@ pub fn try_build(attributes: Attributes) -> Result<()> {
 
   cfg_alias("dev", is_dev());
 
-  let cargo_toml_path = Path::new("Cargo.toml").canonicalize()?;
+  // NOTE(paris): When building Tauri apps, we update `rules_rust()` to not change the working 
+  // directory to the Rust app root (i.e. Cargo.toml). Instead we execute from the the sandbox 
+  // root. This is important b/c many of our build tools (i.e. workspace-env) expect to be run from 
+  // the sandbox root.
+  //
+  // This means that Cargo.toml may not be available in the current working dir. So we instead
+  // search for it in the current directory or any child directory.
+  let cargo_toml_path = tauri_utils::config::parse::find_file("Cargo.toml", &env::current_dir().unwrap());
   let mut manifest = Manifest::<cargo_toml::Value>::from_path_with_metadata(cargo_toml_path)?;
 
   let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
