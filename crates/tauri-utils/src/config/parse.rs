@@ -174,7 +174,7 @@ pub fn find_file(file_name: &str, root_dir: &Path) -> String {
   {
       return entry.path().to_string_lossy().to_string();
   }
-  panic!("Cargo.toml not found in current dir or children");
+  panic!("{} not found in current dir or children", file_name);
 }
 
 /// Reads the configuration from the given root directory.

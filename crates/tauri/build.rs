@@ -335,10 +335,33 @@ fn main() {
   #[cfg(target_os = "macos")]
   {
     if target_os == "ios" {
-      let lib_path =
+      // NOTE(lreyna): We get the canonical path of the iOS API because downstream dependencies of tauri
+      // won't have the runfiles directory in the bazel sandbox. We see this issue when building tauri-plugins that expect a path to exist.
+      //
+      // Example: instead of passing `/private/var/tmp/.../sandbox/darwin-sandbox/1487/execroot/_main/bazel-out/.../_bs.cargo_runfiles/tauri-plugin-native-app-export-deps__tauri-2.8.2/mobile/ios-api`
+      // We pass `/private/var/tmp/.../external/tauri-plugin-native-app-export-deps__tauri-2.8.2/mobile/ios-api`
+      let lib_path: PathBuf =
         PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("mobile/ios-api");
-      tauri_utils::build::link_apple_library("Tauri", &lib_path);
-      println!("cargo:ios_library_path={}", lib_path.display());
+
+      let lib_path_canon: PathBuf;
+      let package_swift_path: PathBuf = lib_path.join("Package.swift");
+      if package_swift_path.exists() {
+        lib_path_canon = package_swift_path
+          .canonicalize()
+          .expect("failed to canonicalize Package.swift")
+          .parent()
+          .expect("failed to get parent directory")
+          .to_path_buf();
+      } else {
+        panic!(
+          "Could not find Package.swift at expected path: {}",
+          package_swift_path.display()
+        );
+      }
+
+      tauri_utils::build::link_apple_library("Tauri", &lib_path_canon);
+
+      println!("cargo:ios_library_path={}", lib_path_canon.display());
     }
   }
 
