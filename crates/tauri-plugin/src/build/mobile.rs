@@ -98,8 +98,15 @@ pub(crate) fn setup(
           .unwrap();
         let tauri_library_path = std::env::var("DEP_TAURI_IOS_LIBRARY_PATH")
             .expect("missing `DEP_TAURI_IOS_LIBRARY_PATH` environment variable. Make sure `tauri` is a dependency of the plugin.");
-
-        let tauri_dep_path = path.parent().unwrap().join(".tauri");
+        
+        // NOTE(paris): When building Tauri apps, we update `rules_rust()` to not change the working 
+        // directory to the Rust app root (i.e. Cargo.toml). Instead we execute from the the sandbox 
+        // root. This is important b/c many of our build tools (i.e. workspace-env) expect to be run from 
+        // the sandbox root.
+        // 
+        // This means that here we need to copy files not just into .tauri, but into the root of the 
+        // plugin.
+        let tauri_dep_path = manifest_dir.join(".tauri");
         create_dir_all(&tauri_dep_path).context("failed to create .tauri directory")?;
         copy_folder(
           Path::new(&tauri_library_path),
