@@ -362,7 +362,14 @@ fn main() {
       };
 
       tauri_utils::build::link_apple_library("Tauri", &lib_path_canon);
-      println!("cargo:ios_library_path={}", lib_path_canon.display());
+
+      // We want the relative paths to be the values that end up in `bazel-out/ios_arm64-fastbuild/bin/external/tauri-deps__tauri-2.8.2/_bs.depenv`,
+      // this prevents remote caches from providing absolute paths that don't exist on local machines.
+      let bazel_output_path = std::env::var("BAZEL_OUTPUT_BASE")
+          .map(PathBuf::from)
+          .unwrap();
+      let relative_lib_path = lib_path_canon.strip_prefix(&bazel_output_path).expect("failed to get relative path for iOS library");
+      println!("cargo:ios_library_path={}", relative_lib_path.display());
     }
   }
 
