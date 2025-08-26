@@ -362,7 +362,14 @@ fn main() {
       };
 
       tauri_utils::build::link_apple_library("Tauri", &lib_path_canon);
-      println!("cargo:ios_library_path={}", lib_path_canon.display());
+
+      // We want the relative paths to be the values that end up in `bazel-out/ios_arm64-fastbuild/bin/external/tauri-deps__tauri-2.8.2/_bs.depenv`,
+      // this prevents remote caches from providing absolute paths that don't exist on local machines.
+      let bazel_output_path = std::env::var("BAZEL_OUTPUT_BASE")
+          .map(PathBuf::from)
+          .unwrap();
+      let relative_lib_path = lib_path_canon.strip_prefix(&bazel_output_path).expect("failed to get relative path for iOS library");
+      println!("cargo:ios_library_path={}", relative_lib_path.display());
     }
   }
 
@@ -373,9 +380,16 @@ fn main() {
   //
   // This means that bundle.global.js may not be available in the current working dir. So we instead
   // search for it in the current directory or any child directory.
-  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
+  let tauri_global_scripts_canon = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
     .canonicalize()
     .expect("failed to canonicalize tauri global API script path");
+
+  let bazel_output_path = std::env::var("BAZEL_OUTPUT_BASE")
+      .map(PathBuf::from)
+      .unwrap();
+  let tauri_global_scripts = tauri_global_scripts_canon.strip_prefix(&bazel_output_path)
+      .expect("failed to get relative path for Tauri global API script").to_path_buf();
+
   tauri_utils::plugin::define_global_api_script_path(&tauri_global_scripts);
   // This should usually be done in `tauri-build`,
   // but we need to do this here for the examples in this workspace to work as they don't have build scripts

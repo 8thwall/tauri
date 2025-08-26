@@ -23,8 +23,9 @@ mod build {
     println!(
       "cargo:{GLOBAL_API_SCRIPT_PATH_KEY}={}",
       path
-        .canonicalize()
-        .expect("failed to canonicalize global API script path")
+        // NOTE(lreyna): We want the paths to be relative to BAZEL_OUTPUT_BASE
+        // .canonicalize()
+        // .expect("failed to canonicalize global API script path")
         .display()
     )
   }
