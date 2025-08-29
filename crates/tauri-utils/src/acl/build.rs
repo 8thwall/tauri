@@ -55,7 +55,17 @@ fn parse_permissions(paths: Vec<PathBuf>) -> Result<Vec<PermissionFile>, Error> 
   let mut permissions = Vec::new();
   for path in paths {
     let ext = path.extension().unwrap().to_string_lossy().to_string();
-    let permission_file = fs::read_to_string(&path).map_err(|e| Error::ReadFile(e, path))?;
+
+    // NOTE(lreyna): Plugin Permission files will have paths relative to BAZEL_OUTPUT_BASE
+    // Default Tauri Permission files will already exist in the outdir
+    let mut final_path = path.clone();
+    if !path.exists() {
+      let bazel_output_base = std::env::var("BAZEL_OUTPUT_BASE").unwrap_or_default();
+      let stripped = path.strip_prefix("/").unwrap_or(&path);
+      final_path = PathBuf::from(&bazel_output_base).join(stripped);
+    }
+
+    let permission_file = fs::read_to_string(&final_path).map_err(|e| Error::ReadFile(e, final_path))?;
     let permission: PermissionFile = match ext.as_str() {
       "toml" => toml::from_str(&permission_file)?,
       "json" => serde_json::from_str(&permission_file)?,
@@ -73,9 +83,23 @@ pub fn define_permissions<F: Fn(&Path) -> bool>(
   out_dir: &Path,
   filter_fn: F,
 ) -> Result<Vec<PermissionFile>, Error> {
+  let pwd = env::var("PWD").expect("PWD not set");
+  let bazel_output_base = env::var("BAZEL_OUTPUT_BASE").expect("BAZEL_OUTPUT_BASE not set");
+
   let permission_files = glob::glob(pattern)?
     .flatten()
-    .flat_map(|p| p.canonicalize())
+    // NOTE(lreyna): We don't want to use the canonical absolute paths, otherwise it'll reference a bazel sandbox path
+    .flat_map(|p| {
+      let canonical = p.canonicalize().ok()?;
+      let canonical_str = canonical.to_string_lossy();
+      if let Some(stripped) = canonical_str.strip_prefix(&pwd) {
+        Some(PathBuf::from(stripped.trim_start_matches('/')))
+      } else if let Some(stripped) = canonical_str.strip_prefix(&bazel_output_base) {
+        Some(PathBuf::from(stripped.trim_start_matches('/')))
+      } else {
+        Some(canonical)
+      }
+    })
     // filter extension
     .filter(|p| {
       p.extension()
