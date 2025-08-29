@@ -35,8 +35,13 @@ pub struct ResolvedCommand {
   /// The execution context of this command.
   pub context: ExecutionContext,
   /// The capability/permission that referenced this command.
-  #[cfg(debug_assertions)]
-  pub referenced_by: ResolvedCommandReference,
+  // 
+  // TODO(lreyna): Figure out why there's a potential mismatch with debug_assertions between build steps
+  // Logging for `debug_assertions` in `--config=debug` shows us that it's not, but the struct definition
+  // was compiled as if it was.
+  //
+  // #[cfg(debug_assertions)]
+  // pub referenced_by: ResolvedCommandReference,
   /// The list of window label patterns that was resolved for this command.
   pub windows: Vec<glob::Pattern>,
   /// The list of webview label patterns that was resolved for this command.
@@ -233,11 +238,11 @@ fn resolve_command(
 
     resolved_list.push(ResolvedCommand {
       context,
-      #[cfg(debug_assertions)]
-      referenced_by: ResolvedCommandReference {
-        capability: capability.identifier.clone(),
-        permission: referenced_by_permission_identifier.clone(),
-      },
+      // #[cfg(debug_assertions)]
+      // referenced_by: ResolvedCommandReference {
+      //   capability: capability.identifier.clone(),
+      //   permission: referenced_by_permission_identifier.clone(),
+      // },
       windows: parse_glob_patterns(capability.windows.clone())?,
       webviews: parse_glob_patterns(capability.webviews.clone())?,
       scope_id,
