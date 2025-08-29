@@ -9,7 +9,7 @@ pub use build::*;
 #[cfg(feature = "build")]
 mod build {
   use std::{
-    env::vars_os,
+    env::{vars_os, var},
     fs,
     path::{Path, PathBuf},
   };
@@ -20,9 +20,15 @@ mod build {
 
   /// Defines the path to the global API script using Cargo instructions.
   pub fn define_global_api_script_path(path: &Path) {
+    let resolved_path = if path.is_relative() {
+      PathBuf::from(var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set")).join(path)
+    } else {
+      path.to_path_buf()
+    };
+
     println!(
       "cargo:{GLOBAL_API_SCRIPT_PATH_KEY}={}",
-      path
+      resolved_path
         .canonicalize()
         .expect("failed to canonicalize global API script path")
         .display()
