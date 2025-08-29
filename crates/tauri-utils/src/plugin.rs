@@ -20,18 +20,25 @@ mod build {
 
   /// Defines the path to the global API script using Cargo instructions.
   pub fn define_global_api_script_path(path: &Path) {
+    // NOTE(lreyna): We want paths to the paths that are stored in the `.depenv` output to be relative.
+    // Otherwise, you might get a path that doesn't exist on your system (either an old sandbox or a path from remote cache on jenkins)
+    // We get the canonical path (resolved symlinks) and get the relative path of the global script.
+    // When the path is read later, it will be resolved with the same bazel output base path
+    // i.e. Example Output: DEP_TAURI_PLUGIN_CORS_FETCH_GLOBAL_API_SCRIPT_PATH=external/tauri-deps__tauri-plugin-cors-fetch-4.1.0/api-iife.js
+    let bazel_output_base = PathBuf::from(var("BAZEL_OUTPUT_BASE").expect("BAZEL_OUTPUT_BASE not set"));
+
     let resolved_path = if path.is_relative() {
       PathBuf::from(var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set")).join(path)
     } else {
       path.to_path_buf()
     };
+  
+    let canon_path = resolved_path.canonicalize().expect("failed to canonicalize global API script path");
+    let relative_path = canon_path.strip_prefix(&bazel_output_base).expect("failed to get relative path of global API script");
 
     println!(
       "cargo:{GLOBAL_API_SCRIPT_PATH_KEY}={}",
-      resolved_path
-        .canonicalize()
-        .expect("failed to canonicalize global API script path")
-        .display()
+      relative_path.display()
     )
   }
 
