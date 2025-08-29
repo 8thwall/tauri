@@ -116,8 +116,16 @@ impl<'a> Builder<'a> {
     }
 
     println!("cargo:rerun-if-changed=permissions");
+
+    // NOTE(lreyna): When working with Bazel, our plugin permissions files will not be in the PWD directory.
+    // The path looks something like:
+    // `external/tauri-deps__tauri-plugin-cors-fetch-4.1.0/_bs-.runfiles/tauri-deps__tauri-plugin-cors-fetch-4.1.0/permissions`
+    let cargo_manifest_dir = PathBuf::from(build_var("CARGO_MANIFEST_DIR")?);
+    let permissions_pattern = cargo_manifest_dir.join("permissions").join("**/*.*");
+    let permissions_pattern_str = permissions_pattern.to_str().unwrap().to_string();
+
     let permissions =
-      acl::build::define_permissions("./permissions/**/*.*", &name, &out_dir, |_| true)?;
+      acl::build::define_permissions(&permissions_pattern_str, &name, &out_dir, |_| true)?;
 
     if permissions.is_empty() {
       let _ = std::fs::remove_file(format!(
