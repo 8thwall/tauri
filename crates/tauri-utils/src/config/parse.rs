@@ -192,16 +192,12 @@ pub fn clean_canonical_path<P: AsRef<std::path::Path>>(path: P) -> PathBuf {
     let pattern = format!(".tmp_git_root/crates/{}", crate_name);
     let path_str = path.as_ref().to_string_lossy();
 
-    println!("cargo:warning=Cleaning path: {}", path_str);
-
     let cleaned = if path_str.contains(".tmp_git_root") {
         path_str.replace(&pattern, "")
     } else {
         path_str.to_string()
     };
     let cleaned = cleaned.replace("//", "/");
-
-    println!("cargo:warning=Cleaned path: {}", cleaned);
 
     PathBuf::from(cleaned)
 }
