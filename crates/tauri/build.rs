@@ -385,7 +385,6 @@ fn main() {
   let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
     .canonicalize()
     .expect("failed to canonicalize tauri global API script path");
-
   tauri_utils::plugin::define_global_api_script_path(&tauri_global_scripts);
   // This should usually be done in `tauri-build`,
   // but we need to do this here for the examples in this workspace to work as they don't have build scripts
