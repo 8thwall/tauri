@@ -177,6 +177,16 @@ pub fn find_file(file_name: &str, root_dir: &Path) -> String {
   panic!("Cargo.toml not found in current dir or children");
 }
 
+/// NOTE(lreyna): This method is very specific to our use case with Bazel
+/// rules_rust will use `new_git_repository` rules to download crates through git
+/// This leaves canonical paths somewhere in `.tmp_git_root`, by default `rules_rust` will exclude anything
+/// in `.tmp_git_root` for downstream dependencies. This causes FileNotFound errors when referencing paths.
+/// This method cleans up the canonical paths by removing the `.tmp_git_root` prefix along with the KNOWN path for Tauri crates.
+/// It would be much nicer to set up a more generic solution for this.
+/// 
+/// Example:
+/// Before: DEP_TAURI_IOS_LIBRARY_PATH=external/tauri-deps__tauri-2.8.2/.tmp_git_root/crates/tauri/mobile/ios-api
+/// After: DEP_TAURI_IOS_LIBRARY_PATH=external/tauri-deps__tauri-2.8.2/mobile/ios-api
 pub fn clean_canonical_path<P: AsRef<std::path::Path>>(path: P) -> PathBuf {
     let crate_name = std::env::var("CARGO_CRATE_NAME").expect("CARGO_CRATE_NAME not set");
     let pattern = format!(".tmp_git_root/crates/{}", crate_name);
