@@ -346,11 +346,13 @@ fn main() {
       let lib_path =
         PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("mobile/ios-api");
 
+      println!("cargo:warning=ios_library_path={}", lib_path.display());
+
       let package_swift_path: PathBuf = lib_path.join("Package.swift");
       let lib_path_canon: PathBuf = if package_swift_path.exists() {
         package_swift_path
-          // .canonicalize()
-          // .expect("Failed to canonicalize Package.swift")
+          .canonicalize()
+          .expect("Failed to canonicalize Package.swift")
           .parent()
           .expect("Failed to get parent directory of Package.swift")
           .to_path_buf()
