@@ -425,7 +425,11 @@ pub fn build(out_dir: &Path, target: Target, attributes: &Attributes) -> super::
     tauri_utils::acl::build::parse_capabilities(pattern)?
   } else {
     println!("cargo:rerun-if-changed=capabilities");
-    tauri_utils::acl::build::parse_capabilities("./capabilities/**/*")?
+
+    // NOTE(lreyna): When working with Bazel, our tauri shell capabilities will not be in the PWD directory.
+    let cargo_manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR").unwrap();
+    let capability_path_pattern = format!("{}/capabilities/**/*", cargo_manifest_dir.to_string_lossy());
+    tauri_utils::acl::build::parse_capabilities(&capability_path_pattern)?
   };
   validate_capabilities(&acl_manifests, &capabilities)?;
 
