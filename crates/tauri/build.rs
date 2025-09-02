@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use heck::AsShoutySnakeCase;
-use tauri_utils::{write_if_changed};
+use tauri_utils::write_if_changed;
 
 use std::{
   collections::BTreeMap,
