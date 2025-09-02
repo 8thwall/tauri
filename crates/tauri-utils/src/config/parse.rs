@@ -167,12 +167,24 @@ pub fn is_configuration_file(target: Target, path: &Path) -> bool {
 /// Look for file in the current directory or any child directory. 
 /// ``
 /// Returns the path to the file if found, otherwise panics.
-pub fn find_file(file_name: &str, root_dir: &Path) -> String {
+use regex::Regex;
+
+pub fn find_file(
+  file_name: &str,
+  root_dir: &Path,
+) -> String {
+  // Exclude some paths that might contain similar file names that shouldn't be in the sandbox
+  let default_exclude_pattern = r"(\.git|\.cargo|\.idea|\.vscode|\.DS_Store|.tmp_git_root)";
+  let exclude_regex = Regex::new(default_exclude_pattern).expect("Invalid regex pattern");
   if let Some(entry) = WalkDir::new(root_dir)
-      .into_iter()
-      .filter_map(Result::ok).find(|e| e.file_name() == file_name)
+    .into_iter()
+    .filter_map(Result::ok)
+    .filter(|e| {
+      !exclude_regex.is_match(&e.path().to_string_lossy())
+    })
+    .find(|e| e.file_name() == file_name)
   {
-      return entry.path().to_string_lossy().to_string();
+    return entry.path().to_string_lossy().to_string();
   }
   panic!("Cargo.toml not found in current dir or children");
 }
