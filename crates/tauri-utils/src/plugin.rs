@@ -34,7 +34,8 @@ mod build {
     };
   
     let canon_path = resolved_path.canonicalize().expect("failed to canonicalize global API script path");
-    let relative_path = canon_path.strip_prefix(&bazel_output_base).expect("failed to get relative path of global API script");
+    let cleaned_canon_path = crate::config::parse::clean_canonical_path(canon_path);
+    let relative_path = cleaned_canon_path.strip_prefix(&bazel_output_base).expect("failed to get relative path of global API script");
 
     println!(
       "cargo:{GLOBAL_API_SCRIPT_PATH_KEY}={}",
