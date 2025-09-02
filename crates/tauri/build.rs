@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use heck::AsShoutySnakeCase;
-use tauri_utils::write_if_changed;
+use tauri_utils::{write_if_changed};
 
 use std::{
   collections::BTreeMap,
@@ -346,8 +346,6 @@ fn main() {
       let lib_path =
         PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("mobile/ios-api");
 
-      println!("cargo:warning=ios_library_path={}", lib_path.display());
-
       let package_swift_path: PathBuf = lib_path.join("Package.swift");
       let lib_path_canon: PathBuf = if package_swift_path.exists() {
         package_swift_path
@@ -363,14 +361,16 @@ fn main() {
         );
       };
 
-      tauri_utils::build::link_apple_library("Tauri", &lib_path_canon);
+      let cleaned_lib_path = tauri_utils::config::parse::clean_canonical_path(lib_path_canon);
+
+      tauri_utils::build::link_apple_library("Tauri", &cleaned_lib_path);
 
       // We want the relative paths to be the values that end up in `bazel-out/ios_arm64-fastbuild/bin/external/tauri-deps__tauri-2.8.2/_bs.depenv`,
       // this prevents remote caches from providing absolute paths that don't exist on local machines.
       let bazel_output_path = std::env::var("BAZEL_OUTPUT_BASE")
           .map(PathBuf::from)
           .unwrap();
-      let relative_lib_path = lib_path_canon.strip_prefix(&bazel_output_path).expect("failed to get relative path for iOS library");
+      let relative_lib_path = cleaned_lib_path.strip_prefix(&bazel_output_path).expect("failed to get relative path for iOS library");
       println!("cargo:ios_library_path={}", relative_lib_path.display());
     }
   }
@@ -382,15 +382,17 @@ fn main() {
   //
   // This means that bundle.global.js may not be available in the current working dir. So we instead
   // search for it in the current directory or any child directory.
-  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()));
-    // NOTE(lreyna): We don't want to canonicalize, since this could cause paths to be resolved with `.tmp_git_root`
-    // .canonicalize()
-    // .expect("failed to canonicalize tauri global API script path");
-  tauri_utils::plugin::define_global_api_script_path(&tauri_global_scripts);
+  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
+    .canonicalize()
+    .expect("failed to canonicalize tauri global API script path");
+
+  let cleaned_tauri_global_scripts = tauri_utils::config::parse::clean_canonical_path(tauri_global_scripts);
+
+  tauri_utils::plugin::define_global_api_script_path(&cleaned_tauri_global_scripts);
   // This should usually be done in `tauri-build`,
   // but we need to do this here for the examples in this workspace to work as they don't have build scripts
   if is_tauri_workspace {
-    tauri_utils::plugin::save_global_api_scripts_paths(&out_dir, Some(tauri_global_scripts));
+    tauri_utils::plugin::save_global_api_scripts_paths(&out_dir, Some(cleaned_tauri_global_scripts));
   }
 
   let permissions = define_permissions(&out_dir);
