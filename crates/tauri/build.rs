@@ -349,8 +349,8 @@ fn main() {
       let package_swift_path: PathBuf = lib_path.join("Package.swift");
       let lib_path_canon: PathBuf = if package_swift_path.exists() {
         package_swift_path
-          .canonicalize()
-          .expect("Failed to canonicalize Package.swift")
+          // .canonicalize()
+          // .expect("Failed to canonicalize Package.swift")
           .parent()
           .expect("Failed to get parent directory of Package.swift")
           .to_path_buf()
@@ -380,10 +380,10 @@ fn main() {
   //
   // This means that bundle.global.js may not be available in the current working dir. So we instead
   // search for it in the current directory or any child directory.
-  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
+  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()));
     // NOTE(lreyna): We don't want to canonicalize, since this could cause paths to be resolved with `.tmp_git_root`
     // .canonicalize()
-    .expect("failed to canonicalize tauri global API script path");
+    // .expect("failed to canonicalize tauri global API script path");
   tauri_utils::plugin::define_global_api_script_path(&tauri_global_scripts);
   // This should usually be done in `tauri-build`,
   // but we need to do this here for the examples in this workspace to work as they don't have build scripts
