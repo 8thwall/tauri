@@ -380,9 +380,15 @@ fn main() {
   //
   // This means that bundle.global.js may not be available in the current working dir. So we instead
   // search for it in the current directory or any child directory.
-  let tauri_global_scripts = PathBuf::from(tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap()))
+  println!("Searching for bundle.global.js in {:?}", std::env::current_dir().unwrap());
+  let found_path = tauri_utils::config::parse::find_file("bundle.global.js", &std::env::current_dir().unwrap(), None);
+  println!("Found bundle.global.js at: {}", found_path);
+  let tauri_global_scripts = PathBuf::from(found_path)
     .canonicalize()
-    .expect("failed to canonicalize tauri global API script path");
+    .unwrap_or_else(|e| {
+      println!("Error canonicalizing path: {}", e);
+      panic!("failed to canonicalize tauri global API script path");
+    });
   tauri_utils::plugin::define_global_api_script_path(&tauri_global_scripts);
   // This should usually be done in `tauri-build`,
   // but we need to do this here for the examples in this workspace to work as they don't have build scripts
