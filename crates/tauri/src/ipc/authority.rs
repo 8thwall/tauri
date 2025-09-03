@@ -240,8 +240,7 @@ impl RuntimeAuthority {
         .map(|r| {
           format!(
             "capability: {}, permission: {}",
-            "<<capability>>", // TODO(lreyna): Fix issue with `referenced_by` in debug mode
-            "<<permission>>"
+            "<<capability>>", "<<permission>>" // TODO(lreyna): Fix issue with `referenced_by` in debug mode
             // r.referenced_by.capability, r.referenced_by.permission
           )
         })
