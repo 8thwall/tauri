@@ -468,9 +468,6 @@ mod build {
 
   impl ToTokens for ResolvedCommand {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-      #[cfg(debug_assertions)]
-      let referenced_by = &self.referenced_by;
-
       let context = &self.context;
 
       let windows = vec_lit(&self.windows, |window| {
@@ -483,19 +480,21 @@ mod build {
       });
       let scope_id = opt_lit(self.scope_id.as_ref());
 
-      #[cfg(debug_assertions)]
-      {
-        literal_struct!(
-          tokens,
-          ::tauri::utils::acl::resolved::ResolvedCommand,
-          context,
-          referenced_by,
-          windows,
-          webviews,
-          scope_id
-        )
-      }
-      #[cfg(not(debug_assertions))]
+      // #[cfg(debug_assertions)]
+      // {
+      //   let referenced_by = &self.referenced_by;
+
+      //   literal_struct!(
+      //     tokens,
+      //     ::tauri::utils::acl::resolved::ResolvedCommand,
+      //     context,
+      //     referenced_by,
+      //     windows,
+      //     webviews,
+      //     scope_id
+      //   )
+      // }
+      // #[cfg(not(debug_assertions))]
       literal_struct!(
         tokens,
         ::tauri::utils::acl::resolved::ResolvedCommand,
