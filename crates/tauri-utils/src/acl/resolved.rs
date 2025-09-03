@@ -39,10 +39,9 @@ pub struct ResolvedCommand {
   // TODO(lreyna): Figure out why there's a potential mismatch with debug_assertions between build steps
   // Logging for `debug_assertions` in `--config=debug` shows us that it's not, but the struct definition
   // was compiled as if it was.
-  // This issue is specifically happening for our ios builds
   //
-  #[cfg(all(debug_assertions, not(target_os = "ios")))]
-  pub referenced_by: ResolvedCommandReference,
+  // #[cfg(debug_assertions)]
+  // pub referenced_by: ResolvedCommandReference,
   /// The list of window label patterns that was resolved for this command.
   pub windows: Vec<glob::Pattern>,
   /// The list of webview label patterns that was resolved for this command.
@@ -469,9 +468,6 @@ mod build {
 
   impl ToTokens for ResolvedCommand {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-      #[cfg(debug_assertions)]
-      let referenced_by = &self.referenced_by;
-
       let context = &self.context;
 
       let windows = vec_lit(&self.windows, |window| {
@@ -484,19 +480,21 @@ mod build {
       });
       let scope_id = opt_lit(self.scope_id.as_ref());
 
-      #[cfg(debug_assertions)]
-      {
-        literal_struct!(
-          tokens,
-          ::tauri::utils::acl::resolved::ResolvedCommand,
-          context,
-          referenced_by,
-          windows,
-          webviews,
-          scope_id
-        )
-      }
-      #[cfg(not(debug_assertions))]
+      // #[cfg(debug_assertions)]
+      // {
+      //   let referenced_by = &self.referenced_by;
+
+      //   literal_struct!(
+      //     tokens,
+      //     ::tauri::utils::acl::resolved::ResolvedCommand,
+      //     context,
+      //     referenced_by,
+      //     windows,
+      //     webviews,
+      //     scope_id
+      //   )
+      // }
+      // #[cfg(not(debug_assertions))]
       literal_struct!(
         tokens,
         ::tauri::utils::acl::resolved::ResolvedCommand,

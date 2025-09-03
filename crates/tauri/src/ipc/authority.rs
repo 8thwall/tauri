@@ -240,11 +240,8 @@ impl RuntimeAuthority {
         .map(|r| {
           format!(
             "capability: {}, permission: {}",
-            #[cfg(target_os = "ios")]
-            "<<capability>>", "<<permission>>" // TODO(lreyna): Fix issue with `referenced_by` in debug mode for iOS
-
-            #[cfg(not(target_os = "ios"))]
-            r.referenced_by.capability, r.referenced_by.permission
+            "<<capability>>", "<<permission>>" // TODO(lreyna): Fix issue with `referenced_by` in debug mode
+            // r.referenced_by.capability, r.referenced_by.permission
           )
         })
         .collect::<Vec<_>>()
@@ -425,11 +422,10 @@ impl RuntimeAuthority {
                 };
                 format!(
                   "- context: {context}, referenced by: capability: {}, permission: {}",
-                  #[cfg(target_os = "ios")]
-                  "<<capability>>", "<<permission>>" // TODO(lreyna): Fix issue with `referenced_by` in debug mode for iOS
-
-                  #[cfg(not(target_os = "ios"))]
-                  resolved.referenced_by.capability, resolved.referenced_by.permission
+                  "<<capability>>", // TODO(lreyna): Fix issue with `referenced_by` in debug mode
+                  "<<permission>>"
+                  // resolved.referenced_by.capability,
+                  // resolved.referenced_by.permission
                 )
               })
               .collect::<Vec<_>>()
