@@ -39,9 +39,10 @@ pub struct ResolvedCommand {
   // TODO(lreyna): Figure out why there's a potential mismatch with debug_assertions between build steps
   // Logging for `debug_assertions` in `--config=debug` shows us that it's not, but the struct definition
   // was compiled as if it was.
+  // This issue is specifically happening for our ios builds
   //
-  // #[cfg(debug_assertions)]
-  // pub referenced_by: ResolvedCommandReference,
+  #[cfg(all(debug_assertions, not(target_os = "ios")))]
+  pub referenced_by: ResolvedCommandReference,
   /// The list of window label patterns that was resolved for this command.
   pub windows: Vec<glob::Pattern>,
   /// The list of webview label patterns that was resolved for this command.
