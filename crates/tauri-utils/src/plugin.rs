@@ -26,6 +26,7 @@ mod build {
     // When the path is read later, it will be resolved with the same bazel output base path
     // i.e. Example Output: DEP_TAURI_PLUGIN_CORS_FETCH_GLOBAL_API_SCRIPT_PATH=external/tauri-deps__tauri-plugin-cors-fetch-4.1.0/api-iife.js
     let bazel_output_base = PathBuf::from(var("BAZEL_OUTPUT_BASE").expect("BAZEL_OUTPUT_BASE not set"));
+    let bazel_execution_root = PathBuf::from(var("BAZEL_EXECUTION_ROOT").expect("BAZEL_EXECUTION_ROOT not set"));
 
     let resolved_path = if path.is_relative() {
       PathBuf::from(var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set")).join(path)
@@ -35,7 +36,9 @@ mod build {
   
     let canon_path = resolved_path.canonicalize().expect("failed to canonicalize global API script path");
     let cleaned_canon_path = crate::config::parse::clean_canonical_path(canon_path);
-    let relative_path = cleaned_canon_path.strip_prefix(&bazel_output_base).expect("failed to get relative path of global API script");
+    let relative_path = cleaned_canon_path.strip_prefix(&bazel_execution_root)
+        .or_else(|_| cleaned_canon_path.strip_prefix(&bazel_output_base))
+        .expect("failed to get relative path of global API script");
 
     println!(
       "cargo:{GLOBAL_API_SCRIPT_PATH_KEY}={}",
