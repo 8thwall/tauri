@@ -85,6 +85,7 @@ pub fn define_permissions<F: Fn(&Path) -> bool>(
 ) -> Result<Vec<PermissionFile>, Error> {
   let pwd = env::var("PWD").expect("PWD not set");
   let bazel_output_base = env::var("BAZEL_OUTPUT_BASE").expect("BAZEL_OUTPUT_BASE not set");
+  let bazel_workspace = env::var("BAZEL_WORKSPACE").expect("BAZEL_WORKSPACE not set");
 
   let permission_files = glob::glob(pattern)?
     .flatten()
@@ -96,6 +97,9 @@ pub fn define_permissions<F: Fn(&Path) -> bool>(
         Some(PathBuf::from(stripped.trim_start_matches('/')))
       } else if let Some(stripped) = canonical_str.strip_prefix(&bazel_output_base) {
         Some(PathBuf::from(stripped.trim_start_matches('/')))
+      } else if let Some(stripped) = canonical_str.strip_prefix(&bazel_workspace) {
+        // Strip the workspace prefix and add the execroot path, this is complementary to the change made in https://github.com/8thwall/tauri/pull/11
+        Some(PathBuf::from("execroot/_main").join(stripped.trim_start_matches('/')))
       } else {
         Some(canonical)
       }
