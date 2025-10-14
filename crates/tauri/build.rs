@@ -247,6 +247,11 @@ fn alias(alias: &str, has_feature: bool) {
 }
 
 fn main() {
+  println!("cargo:warning=[local-tauri] build.rs starting");
+  println!("cargo:warning=[local-tauri] TARGET = {:?}", std::env::var("TARGET"));
+  println!("cargo:warning=[local-tauri] CARGO_CFG_TARGET_OS = {:?}", std::env::var("CARGO_CFG_TARGET_OS").unwrap());
+  println!("cargo:warning=[local-tauri] WRY_ANDROID_KOTLIN_FILES_OUT_DIR = {:?}", std::env::var("WRY_ANDROID_KOTLIN_FILES_OUT_DIR"));
+
   let custom_protocol = has_feature("custom-protocol");
   let dev = !custom_protocol;
   alias("custom_protocol", custom_protocol);
@@ -255,6 +260,7 @@ fn main() {
   println!("cargo:dev={dev}");
 
   let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
+  println!("[local-tauri] cargo:target_os={target_os}");
   let mobile = target_os == "ios" || target_os == "android";
   alias("desktop", !mobile);
   alias("mobile", mobile);
@@ -277,41 +283,55 @@ fn main() {
   }
 
   if target_os == "android" {
+    println!("[local-tauri] cargo:android=true");
     fn env_var(var: &str) -> String {
       std::env::var(var).unwrap_or_else(|_| {
         panic!("`{var}` is not set, which is needed to generate the kotlin files for android.")
       })
     }
 
-    if let Ok(kotlin_out_dir) = std::env::var("WRY_ANDROID_KOTLIN_FILES_OUT_DIR") {
-      let package = env_var("WRY_ANDROID_PACKAGE");
-      let library = env_var("WRY_ANDROID_LIBRARY");
+    let package = env_var("WRY_ANDROID_PACKAGE");
+    let library = env_var("WRY_ANDROID_LIBRARY");
 
-      let kotlin_out_dir = PathBuf::from(&kotlin_out_dir)
-        .canonicalize()
-        .unwrap_or_else(move |_| {
-          panic!("Failed to canonicalize `WRY_ANDROID_KOTLIN_FILES_OUT_DIR` path {kotlin_out_dir}")
-        });
+    println!("[local-tauri] cargo:android_package={}", package);
+    println!("[local-tauri] cargo:android_library={}", library);
 
-      let kotlin_files_path =
-        PathBuf::from(env_var("CARGO_MANIFEST_DIR")).join("mobile/android-codegen");
-      println!("cargo:rerun-if-changed={}", kotlin_files_path.display());
-      let kotlin_files =
-        fs::read_dir(kotlin_files_path).expect("failed to read Android codegen directory");
+    // Read templates from the tauri crate source
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let kotlin_files_path = PathBuf::from(&manifest_dir).join("mobile/android-codegen");
+    
+    // Write output files to OUT_DIR for Bazel compatibility
+    let kotlin_out_dir = PathBuf::from(&out_dir);
+    println!("[local-tauri] cargo:android_kotlin_out_dir={}", kotlin_out_dir.display());
 
-      for file in kotlin_files {
-        let file = file.unwrap();
+    println!("cargo:rerun-if-changed={}", kotlin_files_path.display());
+    let kotlin_files =
+      fs::read_dir(kotlin_files_path).expect("failed to read Android codegen directory");
 
-        let content = fs::read_to_string(file.path())
-          .expect("failed to read kotlin file as string")
-          .replace("{{package}}", &package)
-          .replace("{{library}}", &library);
+    for file in kotlin_files {
+      let file = file.unwrap();
 
-        let out_path = kotlin_out_dir.join(file.file_name());
-        // Overwrite only if changed to not trigger rebuilds
-        write_if_changed(&out_path, &content).expect("Failed to write kotlin file");
+      let content = fs::read_to_string(file.path())
+        .expect("failed to read kotlin file as string")
+        .replace("{{package}}", &package)
+        .replace("{{library}}", &library);
 
-        println!("cargo:rerun-if-changed={}", out_path.display());
+      let out_path = kotlin_out_dir.join(file.file_name());
+      // Overwrite only if changed to not trigger rebuilds
+      write_if_changed(&out_path, &content).expect("Failed to write kotlin file");
+
+      println!("[local-tauri] cargo:generated_kotlin_file={}", out_path.display());
+
+      println!("cargo:rerun-if-changed={}", out_path.display());
+    }
+
+    //output contents of the out_path for debugging
+    for entry in fs::read_dir(&kotlin_out_dir).expect("failed to read kotlin out dir") {
+      let entry = entry.expect("failed to read entry");
+      let path = entry.path();
+      if path.extension().and_then(|s| s.to_str()) == Some("kt") {
+        let content = fs::read_to_string(&path).expect("failed to read generated kotlin file");
+        println!("cargo:warning=[local-tauri] Generated Kotlin file: {}\n{}", path.display(), content);
       }
     }
 
